@@ -2,9 +2,6 @@
 
 Flashcard AI là một hệ thống học tập thông minh sử dụng công nghệ **RAG (Retrieval-Augmented Generation)** để tự động chuyển đổi tài liệu từ nhiều định dạng (PDF, Video YouTube, Văn bản) thành các bộ thẻ ghi nhớ (Flashcards) chất lượng cao.
 
-[![Frontend](https://img.shields.io/badge/Frontend-Live-blue?style=for-the-badge&logo=next.js)](https://a20-app-041.onrender.com/)
-[![Backend](https://img.shields.io/badge/Backend-Live-green?style=for-the-badge&logo=flask)](https://flashcard-y5ml.onrender.com/)
-
 ---
 
 ## 🚀 Tính năng nổi bật
@@ -155,16 +152,6 @@ docker build -t flashcard-ai .
 # Chạy container (truyền .env vào)
 docker run -p 5000:5000 --env-file ../.env flashcard-ai
 ```
----
-
-## 🌐 Triển khai trên Render
-
-Dự án đang chạy live tại:
-- **Frontend**: [https://a20-app-041.onrender.com/](https://a20-app-041.onrender.com/)
-- **Backend API**: [https://flashcard-y5ml.onrender.com/](https://flashcard-y5ml.onrender.com/)
-
-> Cần cả 2 service đang chạy để ứng dụng hoạt động đầy đủ do việc khởi động trên render cần mất 1 chút thời gian.
-
 ---
 
 ## 📁 Cấu trúc thư mục
