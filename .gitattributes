@@ -1,0 +1,2 @@
+*.db.0 filter=lfs diff=lfs merge=lfs -text
+RAG_ver2/data/neo4j/** filter=lfs diff=lfs merge=lfs -text

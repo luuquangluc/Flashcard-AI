@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="AI-powered Flashcard AI - Create high-quality Q&A flashcards from PDF using RAG">
+    <title>🧠 Flashcard AI</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <!-- GameFi Assets -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <!-- Charts.js for Dashboard -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body>
+
+
+    <!-- Auth Overlay (Login + Register) -->
+    <div id="loginOverlay" class="login-overlay">
+        <div class="login-box glass-card">
+
+            <!-- AUTH HEADER (dynamic) -->
+            <div class="login-header">
+                <div class="login-logo">🧠</div>
+                <h2 id="authTitle">Flashcard AI</h2>
+                <p id="authSubtitle">Vui lòng đăng nhập để tiếp tục</p>
+            </div>
+
+            <!-- TAB SWITCHER -->
+            <div class="auth-tabs">
+                <button class="auth-tab active" id="tabLogin" onclick="switchAuthTab('login')">Đăng Nhập</button>
+                <button class="auth-tab" id="tabRegister" onclick="switchAuthTab('register')">Đăng Ký</button>
+            </div>
+
+            <!-- LOGIN FORM -->
+            <form id="loginForm" class="login-form" style="display: block;">
+                <div class="form-group">
+                    <label for="loginUsername">Tài khoản</label>
+                    <input type="text" id="loginUsername" placeholder="Nhập username" required autocomplete="off">
+                </div>
+                <div class="form-group">
+                    <label for="loginPassword">Mật khẩu</label>
+                    <div class="password-wrapper">
+                        <input type="password" id="loginPassword" placeholder="Nhập password" required autocomplete="new-password">
+                        <button type="button" class="toggle-pw"
+                            onclick="togglePassword('loginPassword', this)">👁️</button>
+                    </div>
+                </div>
+                <div id="loginError" class="login-error" style="display: none;"></div>
+                <button type="submit" class="btn btn-login" id="loginSubmitBtn">
+                    <span>🚀</span> Đăng Nhập
+                </button>
+            </form>
+
+            <!-- REGISTER FORM -->
+            <form id="registerForm" class="login-form" style="display: none;">
+                <div class="form-group">
+                    <label for="regUsername">Tên tài khoản</label>
+                    <input type="text" id="regUsername" placeholder="Nhập username (tối thiểu 3 ký tự)" required
+                        autocomplete="username" minlength="3">
+                </div>
+                <div class="form-group">
+                    <label for="regPassword">Mật khẩu</label>
+                    <div class="password-wrapper">
+                        <input type="password" id="regPassword" placeholder="Tối thiểu 6 ký tự" required
+                            autocomplete="new-password" minlength="6">
+                        <button type="button" class="toggle-pw"
+                            onclick="togglePassword('regPassword', this)">👁️</button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="regConfirmPassword">Xác nhận mật khẩu</label>
+                    <div class="password-wrapper">
+                        <input type="password" id="regConfirmPassword" placeholder="Nhập lại password" required
+                            autocomplete="new-password">
+                        <button type="button" class="toggle-pw"
+                            onclick="togglePassword('regConfirmPassword', this)">👁️</button>
+                    </div>
+                    <div id="passwordMatchHint" class="pw-match-hint" style="display: none;"></div>
+                </div>
+                <div id="registerError" class="login-error" style="display: none;"></div>
+                <div id="registerSuccess" class="login-success" style="display: none;"></div>
+                <button type="submit" class="btn btn-login" id="registerSubmitBtn">
+                    <span>✨</span> Tạo tài khoản
+                </button>
+            </form>
+
+        </div>
+    </div>
+
+    <div class="app-layout">
+        <!-- Sidebar Navigation -->
+        <aside class="app-sidebar">
+            <div class="sidebar-logo">
+                <span class="logo-icon">🧠</span>
+                <span class="logo-text">Flashcard AI</span>
+            </div>
+
+            <nav class="sidebar-nav">
+                <button class="nav-item active" data-view="generator" id="navGenerator">
+                    <span class="nav-icon">⚡</span>
+                    <span class="nav-text">Tạo Thẻ</span>
+                </button>
+                <button class="nav-item" data-view="analytics" id="navAnalytics">
+                    <span class="nav-icon">📊</span>
+                    <span class="nav-text">Thống kê</span>
+                </button>
+                <button class="nav-item" data-view="library" id="navLibrary">
+                    <span class="nav-icon">📚</span>
+                    <span class="nav-text">Thư viện</span>
+                </button>
+                <button class="nav-item" data-view="study" id="navStudy">
+                    <span class="nav-icon">📖</span>
+                    <span class="nav-text">Học thẻ</span>
+                </button>
+                <button class="nav-item" data-view="game" id="navGame">
+                    <span class="nav-icon">🎮</span>
+                    <span class="nav-text">Trò chơi</span>
+                </button>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="user-profile-mini" id="sidebarUserProfile"
+                    style="display: none; margin-bottom: 1rem; padding: 0.75rem; background: var(--color-bg-warm); border: var(--border-whisper); border-radius: 8px;">
+                    <div style="display: flex; align-items: center; gap: 0.75rem;">
+                        <div class="user-avatar">👤</div>
+                        <div style="overflow: hidden;">
+                            <div id="userNameText"
+                                style="font-size: 0.85rem; font-weight: 600; color: #f1f5f9; white-space: nowrap; text-overflow: ellipsis;">
+                                User Name</div>
+                            <div id="userRoleBadge"
+                                style="font-size: 0.7rem; color: #94a3b8; text-transform: uppercase;">Role</div>
+                        </div>
+                    </div>
+                    <button id="logoutBtn"
+                        style="margin-top: 0.75rem; width: 100%; padding: 0.5rem; background: transparent; border: 1px solid rgba(239, 68, 68, 0.15); border-radius: 6px; color: var(--color-error); font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: 0.2s;">
+                        🚪 Đăng xuất
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-app-content">
+            <div class="app-container">
+                <!-- Header (Persistent) -->
+                <header class="app-header">
+                    <div class="logo-section">
+                        <div class="logo-icon">🧠</div>
+                        <div>
+                            <h1 id="app-title">Flashcard AI</h1>
+                            <p class="subtitle">Powered by AI</p>
+                        </div>
+                    </div>
+
+                    <!-- Player Stats Bar (GameFi) -->
+                    <div class="player-stats-bar" id="playerStats">
+                        <div class="player-rank-info">
+                            <span class="player-rank" id="playerRank">Apprentice</span>
+                            <span class="player-level">Level <span id="playerLevel">1</span></span>
+                        </div>
+                        <div class="xp-progress-container">
+                            <div class="xp-progress-bar" id="xpBar"></div>
+                            <span class="xp-text"><span id="currentXp">0</span> / <span id="nextLevelXp">100</span>
+                                XP</span>
+                        </div>
+                        <div class="streak-badge">
+                            <span class="streak-icon">🔥</span>
+                            <span id="streakCount">0</span>
+                        </div>
+                    </div>
+                </header>
+
+                <!-- View 1: Flashcard Generator -->
+                <div id="generatorView" class="view-container active">
+
+                    <!-- Input Section -->
+                    <section class="input-section glass-card">
+                        <!-- PDF Upload Section -->
+                        <div class="upload-section" style="margin-bottom: 1.5rem;">
+                            <label class="btn btn-upload" id="uploadBtn"
+                                style="width: 100%; justify-content: center; margin-bottom: 0.75rem;">
+                                <span class="btn-icon">📁</span>
+                                <span id="uploadLabel">Upload PDF</span>
+                                <input type="file" id="fileInput" accept=".pdf" hidden>
+                            </label>
+                            <!-- File Info -->
+                            <div class="file-info" id="fileInfo" style="display: none; justify-content: center;">
+                                <span class="file-icon">📎</span>
+                                <span id="fileName"></span>
+                                <button class="file-remove" id="fileRemove">✕</button>
+                            </div>
+                        </div>
+
+                        <!-- Input Mode Selector (Tabs) -->
+                        <div class="input-mode-selector">
+                            <button type="button" class="mode-tab active" id="modeTopic" data-mode="topic">
+                                <span class="mode-icon">🎯</span> Theo Chủ đề
+                            </button>
+                            <button type="button" class="mode-tab" id="modePage" data-mode="page">
+                                <span class="mode-icon">📑</span> Theo Dải trang
+                            </button>
+                        </div>
+
+                        <!-- Unified Input Section -->
+                        <div id="unifiedInputContainer" class="mode-container active" style="margin-bottom: 1.5rem;">
+                            <div class="input-label-row"
+                                style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; color: #f1f5f9; font-size: 0.9rem; font-weight: 500;">
+                                <span id="inputInstruction">Nhập chủ đề hoặc câu hỏi muốn tạo thẻ:</span>
+                                <span id="inputHint" style="color: #94a3b8; font-size: 0.75rem; font-weight: 400;">Ví
+                                    dụ: Định nghĩa RAG là gì?</span>
+                            </div>
+                            <textarea id="inputText" class="text-input" placeholder="Nhập chủ đề hoặc câu hỏi..."
+                                rows="6"></textarea>
+                            <div id="structureWarning" class="warning-box"
+                                style="display: none; margin-top: 0.75rem; padding: 0.75rem; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 8px; font-size: 0.85rem; color: #fca5a5;">
+                                <p>⚠️ <strong>Cần nhập trang:</strong> Cấu trúc tài liệu này không đủ tốt để tìm kiếm
+                                    theo chủ đề chính xác. Vui lòng sử dụng chế độ "Theo Dải trang".</p>
+                            </div>
+
+                            <!-- User Desire / Orientation -->
+                            <div class="user-desire-section" style="margin-top: 1.25rem;">
+                                <div class="input-label-row"
+                                    style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; color: #94a3b8; font-size: 0.85rem; font-weight: 500;">
+                                    <span>✨ Chế độ tạo thẻ:</span>
+                                </div>
+
+                                <!-- Desire Mode Selector -->
+                                <div class="input-mode-selector" style="margin-bottom: 0.75rem;">
+                                    <button type="button" class="mode-tab active" id="desireDefault"
+                                        data-desire="default">
+                                        <span class="mode-icon">📝</span> Trích xuất nội dung
+                                    </button>
+                                    <button type="button" class="mode-tab" id="desireLanguage" data-desire="language">
+                                        <span class="mode-icon">🌍</span> Trích xuất từ vựng
+                                    </button>
+                                </div>
+
+                                <div id="desireHint"
+                                    style="display: block; padding: 0.85rem 1.1rem; background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.2); border-radius: 8px; font-size: 0.85rem; color: #a5b4fc; animation: fadeIn 0.3s ease-out;">
+                                    <p>⚠️ <strong>Chế độ Trích xuất nội dung:</strong> AI sẽ tự động trích xuất nội
+                                        dung theo chủ đề hoặc dải trang và tạo thành câu hỏi, câu trả lời.</p>
+                                </div>
+                            </div>
+
+                            <!-- Tracing Console (Terminal style) -->
+                            <div id="tracingSection" style="display: none; margin-top: 1.25rem;">
+                                <div class="tracing-header"
+                                    style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                                    <span
+                                        style="font-size: 0.75rem; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em;">📡
+                                        RAG Process Tracing</span>
+                                    <span class="tracing-status-dot"></span>
+                                </div>
+                                <div id="tracingConsole" class="terminal-box">
+                                    <div class="terminal-line">Initialized RAG Tracing...</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Action Row: Card Count & Generate Button -->
+                        <div class="action-row"
+                            style="display: flex; justify-content: space-between; align-items: center; margin-top: 1.5rem; gap: 1rem;">
+                            <!-- Target Flashcards Input (Left) -->
+                            <div
+                                style="display: flex; align-items: center; gap: 0.75rem; background: rgba(0, 0, 0, 0.2); padding: 0.5rem 1rem; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.08); white-space: nowrap;">
+                                <label for="cardCountSlider"
+                                    style="color: #f1f5f9; font-size: 0.9rem; font-weight: 500;">Số lượng thẻ tối
+                                    đa:</label>
+                                <input type="number" id="cardCountSlider" min="1" max="20" value="3"
+                                    style="width: 60px; padding: 0.4rem; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.3); color: #818cf8; font-weight: bold; font-size: 1rem; text-align: center; outline: none;">
+                            </div>
+
+                            <!-- Generate Button (Right) -->
+                            <button class="btn btn-generate" id="generateBtn" disabled style="flex: 1; margin: 0;">
+                                <span class="btn-icon">⚡</span>
+                                <span id="generateLabel">Generate Flashcards</span>
+                            </button>
+                        </div>
+
+                        <!-- Error Message -->
+                        <div class="error-message" id="errorMessage" style="display: none;">
+                            <span>⚠️</span>
+                            <span id="errorText"></span>
+                        </div>
+                    </section>
+
+                    <!-- Loading State -->
+                    <div class="loading-section" id="loadingSection" style="display: none;">
+                        <div class="loading-spinner">
+                            <div class="spinner"></div>
+                        </div>
+                        <p class="loading-text" id="loadingText">Retrieving context & generating flashcards...</p>
+                        <div class="loading-bar">
+                            <div class="loading-bar-fill"></div>
+                        </div>
+                    </div>
+
+                    <!-- Results Section -->
+                    <section class="results-section" id="resultsSection" style="display: none;">
+                        <!-- Results Header -->
+                        <div class="results-header glass-card">
+                            <div class="results-info">
+                                <h2>🎴 Generated Flashcards</h2>
+                                <span class="results-count" id="resultsCount">0 cards</span>
+                            </div>
+
+
+                            <div class="export-buttons">
+                                <button class="btn btn-export" id="exportAnki">
+                                    <span>🗂️</span> Export Anki
+                                </button>
+                                <button class="btn btn-save-lib" id="saveToLibraryBtn">
+                                    <span>⭐</span> Lưu vào Thư viện
+                                </button>
+                                <button class="btn btn-game" id="startMatchingGame">
+                                    <span>🎮</span> Chơi Game Nối Thẻ
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Flashcards Grid -->
+                        <div class="flashcards-grid" id="flashcardsGrid"></div>
+                </div> <!-- End generatorView -->
+
+                <!-- View 2: Unified Library (Documents + Sets) -->
+                <div id="libraryView" class="view-container" style="display: none;">
+                    <div class="library-header glass-card">
+                        <div class="library-title">
+                            <h2>📚 Thư viện Cá nhân</h2>
+                            <p>Quản lý tài liệu PDF và các bộ thẻ flashcard đã lưu</p>
+                        </div>
+                    </div>
+
+                    <!-- Library Tabs -->
+                    <div class="library-tabs-container">
+                        <div class="lib-tabs">
+                            <button class="lib-tab active" data-lib-tab="docs" id="tabLibDocs">
+                                <span class="tab-icon">📄</span> Tài liệu PDF
+                            </button>
+                            <button class="lib-tab" data-lib-tab="sets" id="tabLibSets">
+                                <span class="tab-icon">🎴</span> Bộ thẻ đã lưu
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Tab Content: Documents -->
+                    <div id="libDocsContent" class="lib-tab-content active">
+                        <div class="docs-grid" id="docsGrid">
+                            <!-- PDF cards injected here -->
+                        </div>
+                        <div id="docsEmptyState" class="empty-state" style="display: none;">
+                            <div class="empty-icon">📂</div>
+                            <h3>Chưa có tài liệu nào</h3>
+                            <p>Hãy upload file PDF đầu tiên của bạn ở mục Tạo Thẻ!</p>
+                        </div>
+                    </div>
+
+                    <!-- Tab Content: Flashcard Sets -->
+                    <div id="libSetsContent" class="lib-tab-content" style="display: none;">
+                        <div class="library-grid" id="libraryGrid">
+                            <!-- Set cards injected here -->
+                        </div>
+                        <div id="libEmptyState" class="empty-state" style="display: none;">
+                            <div class="empty-icon">📭</div>
+                            <h3>Thư viện thẻ đang trống</h3>
+                            <p>Hãy lưu bộ thẻ bạn vừa tạo vào thư viện để ôn tập sau.</p>
+                        </div>
+                    </div>
+                </div> <!-- End libraryView -->
+
+                <!-- View 4: Game View (Standalone) -->
+                <div id="gameView" class="view-container" style="display: none;">
+                    <div class="library-header glass-card">
+                        <div class="library-title">
+                            <h2>🎮 Trung tâm Trò chơi</h2>
+                            <p>Chọn một bộ thẻ đã lưu để bắt đầu thử thách trí nhớ</p>
+                        </div>
+                    </div>
+
+                    <!-- Game Selection: Saved Sets List -->
+                    <div class="game-sets-section" style="margin-top: 1.5rem;">
+                        <div class="section-header" style="margin-bottom: 1rem;">
+                            <h3 style="color: var(--text-secondary); font-size: 1rem; font-weight: 600;">🗂️ Danh sách
+                                bộ thẻ của bạn:</h3>
+                        </div>
+                        <div class="game-sets-grid" id="gameSetsGrid">
+                            <!-- Saved sets for game will be injected here -->
+                        </div>
+                        <div id="gameEmptyState" class="empty-state" style="display: none;">
+                            <div class="empty-icon">🧩</div>
+                            <h3>Chưa có bộ thẻ nào</h3>
+                            <p>Hãy lưu bộ thẻ từ mục Tạo Thẻ để bắt đầu trò chơi!</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- View 5: Study Mode (SRS) -->
+                <div id="studyView" class="view-container" style="display: none;">
+                    <div class="library-header glass-card">
+                        <div class="library-title">
+                            <h2>📖 Ôn tập Thông minh (SRS)</h2>
+                            <p>Học các thẻ đến hạn dựa trên thuật toán Spaced Repetition (SM-2)</p>
+                        </div>
+                    </div>
+
+                    <div id="studyStartScreen" class="study-start-screen glass-card"
+                        style="margin-top: 1.5rem; text-align: center; padding: 3rem;">
+                        <div class="study-stats-row"
+                            style="display: flex; justify-content: center; gap: 2rem; margin-bottom: 2rem;">
+                            <div class="study-stat-item">
+                                <div id="dueCount" style="font-size: 2.5rem; font-weight: 800; color: #818cf8;">0</div>
+                                <div style="color: #94a3b8; font-size: 0.9rem;">Thẻ cần ôn hôm nay</div>
+                            </div>
+                        </div>
+                        <button class="btn btn-generate" id="startStudyBtn" style="max-width: 300px; margin: 0 auto;">
+                            <span class="btn-icon">🚀</span> Bắt đầu học ngay
+                        </button>
+                    </div>
+
+                    <!-- Study Arena (The actual card flashcard) -->
+                    <div id="studyArena" class="study-arena" style="display: none; margin-top: 2rem;">
+                        <div class="study-progress-info"
+                            style="display: flex; justify-content: space-between; margin-bottom: 1rem; color: #94a3b8; font-size: 0.9rem;">
+                            <span id="studyProgressText">Thẻ 1 / 10</span>
+                            <span id="studySetName">Bộ thẻ: ...</span>
+                        </div>
+
+                        <div class="flashcard-container" id="studyCardContainer">
+                            <!-- Card will be injected here -->
+                        </div>
+
+                        <div class="study-actions" id="studyActions"
+                            style="display: none; margin-top: 2rem; display: flex; justify-content: center; gap: 0.75rem; flex-wrap: wrap;">
+                            <button class="btn btn-quality q-0" onclick="StudyManager.submitReview(0)"
+                                style="background: #ef4444; border-color: #f87171;">
+                                <span>Again</span>
+                            </button>
+                            <button class="btn btn-quality q-3" onclick="StudyManager.submitReview(3)"
+                                style="background: #f59e0b; border-color: #fbbf24;">
+                                <span>Hard</span>
+                            </button>
+                            <button class="btn btn-quality q-4" onclick="StudyManager.submitReview(4)"
+                                style="background: #10b981; border-color: #34d399;">
+                                <span>Good</span>
+                            </button>
+                            <button class="btn btn-quality q-5" onclick="StudyManager.submitReview(5)"
+                                style="background: #6366f1; border-color: #818cf8;">
+                                <span>Easy</span>
+                            </button>
+                        </div>
+
+                        <div id="flipPrompt"
+                            style="text-align: center; margin-top: 1.5rem; color: #94a3b8; font-style: italic;">
+                            Nhấn vào thẻ để xem đáp án
+                        </div>
+                    </div>
+
+                    <div id="studyEmptyState" class="empty-state" style="display: none; margin-top: 2rem;">
+                        <div class="empty-icon">✨</div>
+                        <h3>Tuyệt vời!</h3>
+                        <p>Bạn đã hoàn thành tất cả các thẻ cần ôn tập cho hôm nay.</p>
+                        <button class="btn btn-lib-play" onclick="switchView('generator')" style="margin-top: 1rem;">
+                            Tạo thêm thẻ mới
+                        </button>
+                    </div>
+                </div>
+
+                <!-- View 3: Analytics Dashboard -->
+                <div id="analyticsView" class="view-container" style="display: none;">
+                    <div class="analytics-header glass-card">
+                        <div class="analytics-title">
+                            <h2>📊 Hệ thống Theo dõi & Giám sát</h2>
+                            <p>Phân tích hiệu năng hệ thống và tiến trình học tập</p>
+                        </div>
+                    </div>
+
+                    <!-- Stats Overview Cards -->
+                    <div class="stats-overview-grid">
+                        <div class="stat-mini-card glass-card">
+                            <div class="stat-icon">🎴</div>
+                            <div class="stat-data">
+                                <span class="stat-value" id="dashTotalCards">0</span>
+                                <span class="stat-label">Tổng số thẻ</span>
+                            </div>
+                        </div>
+                        <div class="stat-mini-card glass-card" data-role="admin">
+                            <div class="stat-icon">🪙</div>
+                            <div class="stat-data">
+                                <span class="stat-value" id="dashTotalTokens">0</span>
+                                <span class="stat-label">Tổng Tokens</span>
+                            </div>
+                        </div>
+                        <div class="stat-mini-card glass-card" data-role="admin">
+                            <div class="stat-icon">⚡</div>
+                            <div class="stat-data">
+                                <span class="stat-value" id="dashAvgTokens">0</span>
+                                <span class="stat-label">Tokens/Bộ thẻ</span>
+                            </div>
+                        </div>
+                        <div class="stat-mini-card glass-card" data-role="admin">
+                            <div class="stat-icon">🎯</div>
+                            <div class="stat-data">
+                                <span class="stat-value" id="dashHitRate">0%</span>
+                                <span class="stat-label">RAG Hit Rate</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="analytics-main-grid">
+                        <!-- Section 1: System Performance (Admin) -->
+                        <div class="analytics-section glass-card" data-role="admin">
+                            <div class="section-header">
+                                <h3>🚀 Hiệu năng Hệ thống (System)</h3>
+                            </div>
+                            <div class="chart-container">
+                                <canvas id="tokenUsageChart"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Section 2: Learning Progress (User) -->
+                        <div class="analytics-section glass-card">
+                            <div class="section-header">
+                                <h3>🧠 Phân bổ Kiến thức (User)</h3>
+                            </div>
+                            <div class="chart-container doughnut-container">
+                                <canvas id="levelDistChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Recent Activities Table -->
+                    <div class="analytics-section glass-card" style="margin-top: 1.5rem;">
+                        <div class="section-header">
+                            <h3>🕒 Hoạt động gần đây</h3>
+                        </div>
+                        <div class="table-wrapper">
+                            <table class="analytics-table">
+                                <thead>
+                                    <tr>
+                                        <th>Thời gian</th>
+                                        <th>Chủ đề</th>
+                                        <th>Chế độ</th>
+                                        <th>Số thẻ</th>
+                                        <th data-role="admin">Tokens</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="analyticsTableBody">
+                                    <!-- Data will be injected here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div> <!-- End analyticsView -->
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="app-footer">
+            <p>Built with ❤️ using RAG & Gemini • A20-App-041</p>
+        </footer>
+    </div> <!-- End app-layout -->
+
+    <!-- Edit Flashcard Modal -->
+    <div class="modal-overlay" id="editModal" style="display: none;" role="dialog" aria-modal="true"
+        aria-labelledby="modalTitle">
+        <div class="modal-content">
+            <!-- Modal Header -->
+            <div class="modal-header">
+                <div class="modal-title-group">
+                    <span class="modal-icon">✏️</span>
+                    <h3 id="modalTitle">Edit Flashcard</h3>
+                    <span class="modal-card-badge" id="modalCardBadge">#1</span>
+                </div>
+                <button class="close-modal" id="closeModalBtn" title="Close (Esc)" aria-label="Close modal">✕</button>
+            </div>
+
+            <!-- Modal Body -->
+            <div class="modal-body">
+                <!-- Context Section -->
+                <div class="modal-context-container">
+                    <div class="modal-field context-pdf-part">
+                        <div class="modal-field-label">
+                            <span class="field-icon">📕</span>
+                            <label>Ngữ cảnh PDF (Highlighted)</label>
+                        </div>
+                        <div class="pdf-viewer-container">
+                            <iframe id="pdfViewer" src="about:blank" frameborder="0"></iframe>
+                            <div id="pdfFallback" class="pdf-fallback" style="display: none;">
+                                <p>Không thể hiển thị PDF trực tiếp. <a id="pdfDownloadLink" href="#"
+                                        target="_blank">Tải về tại đây</a>.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-divider">
+                    <span>Chỉnh sửa nội dung</span>
+                </div>
+
+                <!-- Question Field -->
+                <div class="modal-field">
+                    <div class="modal-field-label">
+                        <span class="field-icon">❓</span>
+                        <label for="editQuestion">Câu hỏi (Question)</label>
+                    </div>
+                    <textarea id="editQuestion" class="modal-textarea" rows="3"
+                        placeholder="Nhập câu hỏi..."></textarea>
+                </div>
+
+                <!-- Answer Field -->
+                <div class="modal-field">
+                    <div class="modal-field-label">
+                        <span class="field-icon">💡</span>
+                        <label for="editAnswer">Câu trả lời (Answer)</label>
+                    </div>
+                    <textarea id="editAnswer" class="modal-textarea" rows="4"
+                        placeholder="Nhập câu trả lời..."></textarea>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="modal-footer">
+                <button class="btn-modal btn-modal-cancel" id="cancelEditBtn">
+                    <span>✕</span> Huỷ
+                </button>
+                <button class="btn-modal btn-modal-save" id="saveEditBtn">
+                    <span>✓</span> Lưu thay đổi
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Matching Game Arena Overlay -->
+    <div class="game-arena" id="gameArena" style="display: none;">
+        <div class="game-container">
+            <div class="game-header">
+                <button class="btn-exit-game" id="exitGameBtn">✕ Thoát</button>
+                <div class="game-stats-group">
+                    <div class="game-stat"><span>⏱️</span> <span id="gameTimer">00:00</span></div>
+                    <div class="game-stat"><span>🔥</span> <span id="gameCombo">x1</span></div>
+                </div>
+                <div class="game-progress-wrapper">
+                    <div class="game-progress-bar" id="gameProgress"></div>
+                </div>
+            </div>
+            <div class="game-board">
+                <div class="game-column" id="questionsCol">
+                    <h3>CÂU HỎI</h3>
+                    <div class="matching-grid" id="qGrid"></div>
+                </div>
+                <div class="game-column" id="answersCol">
+                    <h3>CÂU TRẢ LỜI</h3>
+                    <div class="matching-grid" id="aGrid"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="app.js?v=12"></script>
+</body>
+
+</html>

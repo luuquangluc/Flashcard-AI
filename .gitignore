@@ -1,0 +1,21 @@
+# Environment
+.env
+.env.example
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+build/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+
+# OS
+.DS_Store
+
+
+RAG_luc/temp_ocr/*
+RAG_luc/scratch/*
+RAG_ver2/neo4j/data/RAG_ver2/neo4j/data/

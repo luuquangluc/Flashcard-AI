@@ -1,0 +1,37 @@
+services:
+  # Backend Service (RAG)
+  - type: web
+    name: rag-backend
+    env: docker
+    dockerContext: RAG_luc
+    dockerfilePath: RAG_luc/Dockerfile
+    plan: starter # Recommend starter for RAG memory needs, change to free if needed
+    envVars:
+      - key: FLASK_SECRET_KEY
+        generateValue: true
+      - key: OPENAI_API_KEY
+        sync: false # User needs to set this in Render dashboard
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_KEY
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: YOUTUBE_COOKIES
+        sync: false # Copy-paste contents of cookies.txt here in Render dashboard
+      - key: YT_PROXY
+        sync: false # Optional: Set if YouTube blocks Render IP even with cookies
+
+  # Frontend Service (Next.js)
+  - type: web
+    name: flashcard-frontend
+    env: node
+    plan: starter
+    rootDir: RAG_luc/frontend
+    buildCommand: npm install && npm run build
+    startCommand: npm run start
+    envVars:
+      - key: BACKEND_URL
+        value: https://flashcard-y5ml.onrender.com
